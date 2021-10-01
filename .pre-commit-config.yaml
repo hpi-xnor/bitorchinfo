@@ -1,0 +1,53 @@
+ci:
+  skip: [mypy, pylint, pytest]
+repos:
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v2.28.0
+    hooks:
+    - id: pyupgrade
+      args: [--py38-plus]
+
+  - repo: https://github.com/hadialqattan/pycln
+    rev: v1.0.3
+    hooks:
+      - id: pycln
+
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.9.3
+    hooks:
+      - id: isort
+
+  - repo: https://github.com/psf/black
+    rev: 21.9b0
+    hooks:
+      - id: black
+        args: [-C]
+
+  - repo: https://github.com/PyCQA/flake8
+    rev: 3.9.2
+    hooks:
+      - id: flake8
+
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy
+        entry: mypy
+        language: python
+        types: [python]
+        require_serial: true
+
+      - id: pylint
+        name: pylint
+        entry: pylint
+        language: python
+        types: [python]
+
+      - id: pytest
+        name: pytest
+        entry: pytest --cov=torchinfo --cov-report=html --durations=0
+        language: python
+        types: [python]
+        always_run: true
+        pass_filenames: false
+        verbose: true
