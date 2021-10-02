@@ -23,16 +23,15 @@ class ModelStatistics:
         self.total_output, self.total_mult_adds = 0, 0
 
         for layer_info in summary_list:
-            if layer_info.is_leaf_layer:
-                self.total_mult_adds += layer_info.macs
-                if layer_info.is_recursive:
-                    continue
-                self.total_params += layer_info.num_params
-                if layer_info.trainable:
-                    self.trainable_params += layer_info.num_params
-                if layer_info.num_params > 0:
-                    # x2 for gradients
-                    self.total_output += 2 * prod(layer_info.output_size)
+            self.total_mult_adds += layer_info.macs
+            if layer_info.is_recursive:
+                continue
+            self.total_params += layer_info.num_params
+            if layer_info.trainable:
+                self.trainable_params += layer_info.num_params
+            if layer_info.num_params > 0:
+                # x2 for gradients
+                self.total_output += 2 * prod(layer_info.output_size)
 
         self.formatting.set_layer_name_width(summary_list)
 

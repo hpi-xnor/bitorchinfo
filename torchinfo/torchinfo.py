@@ -457,6 +457,7 @@ def apply_hooks(
         info = LayerInfo(var_name, module, curr_depth, idx[curr_depth], parent_info)
         info.calculate_num_params()
         info.check_recursive(summary_list)
+        info.determine_if_quantized()
         summary_list.append(info)
 
     def hook(module: nn.Module, inputs: Any, outputs: Any) -> None:

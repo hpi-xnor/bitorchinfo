@@ -113,6 +113,17 @@ class LayerInfo:
             if self.depth_index is not None:
                 layer_name += f"-{self.depth_index}"
         return layer_name
+    
+    def determine_if_quantized(self) -> None:
+        """check if module has a quantization function as a named parameter
+        which determines this module as a possible quantized layer
+        """
+        print("own name:", self.class_name)
+        for name, param in self.module.named_parameters():
+            print("got name:", name, "nelements:", param.nelement())
+        for module in self.module.modules():
+            print("got module:", module)
+
 
     def calculate_num_params(self) -> None:
         """
@@ -140,6 +151,7 @@ class LayerInfo:
             self.inner_layers[name][
                 "num_params"
             ] = f"└─{self.inner_layers[name]['num_params'][2:]}"
+        print(f"calculated num params for layer {self.class_name}: {self.num_params}")
 
     def calculate_macs(self) -> None:
         """
@@ -177,22 +189,22 @@ class LayerInfo:
         self, reached_max_depth: bool, children_layers: List["LayerInfo"]
     ) -> str:
         """Convert MACs to string."""
+        print("macs to string for", self.class_name, "macs:", self.macs)
         if self.macs <= 0:
             return "--"
         if self.is_leaf_layer:
             return f"{self.macs:,}"
-        if reached_max_depth:
+        else:
             sum_child_macs = sum(
                 child.macs for child in children_layers if child.is_leaf_layer
-            )
+            ) + self.macs
             return f"{sum_child_macs:,}"
-        return "--"
 
     def num_params_to_str(self, reached_max_depth: bool) -> str:
         """Convert num_params to string."""
         if self.is_recursive:
             return "(recursive)"
-        if self.num_params > 0 and (reached_max_depth or self.is_leaf_layer):
+        if self.num_params > 0:
             param_count_str = f"{self.num_params:,}"
             return param_count_str if self.trainable else f"({param_count_str})"
         return "--"
