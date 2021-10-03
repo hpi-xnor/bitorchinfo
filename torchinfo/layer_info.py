@@ -1,5 +1,5 @@
 """ layer_info.py """
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Union
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Type, Union
 
 import torch
 from torch import nn
@@ -46,6 +46,7 @@ class LayerInfo:
         self.kernel_size: List[int] = []
         self.num_params = 0
         self.macs = 0
+        self.quantized = False
 
     def __repr__(self) -> str:
         return f"{self.class_name}: {self.depth}"
@@ -114,16 +115,14 @@ class LayerInfo:
                 layer_name += f"-{self.depth_index}"
         return layer_name
     
-    def determine_if_quantized(self) -> None:
+    def determine_if_quantized(self, quantization_base_class: Optional[Type] = None) -> None:
         """check if module has a quantization function as a named parameter
         which determines this module as a possible quantized layer
         """
-        print("own name:", self.class_name)
-        for name, param in self.module.named_parameters():
-            print("got name:", name, "nelements:", param.nelement())
-        for module in self.module.modules():
-            print("got module:", module)
-
+        if quantization_base_class:
+            self.quantized = any([issubclass(type(module), quantization_base_class) for module in self.module.modules()])
+        else:
+            self.quantized = False
 
     def calculate_num_params(self) -> None:
         """
@@ -151,7 +150,6 @@ class LayerInfo:
             self.inner_layers[name][
                 "num_params"
             ] = f"└─{self.inner_layers[name]['num_params'][2:]}"
-        print(f"calculated num params for layer {self.class_name}: {self.num_params}")
 
     def calculate_macs(self) -> None:
         """
@@ -189,7 +187,6 @@ class LayerInfo:
         self, reached_max_depth: bool, children_layers: List["LayerInfo"]
     ) -> str:
         """Convert MACs to string."""
-        print("macs to string for", self.class_name, "macs:", self.macs)
         if self.macs <= 0:
             return "--"
         if self.is_leaf_layer:

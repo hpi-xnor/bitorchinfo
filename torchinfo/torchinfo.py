@@ -11,6 +11,7 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
+    Type,
     Union,
     cast,
 )
@@ -59,6 +60,7 @@ def summary(
     dtypes: Optional[List[torch.dtype]] = None,
     row_settings: Optional[Iterable[str]] = None,
     verbose: Optional[int] = None,
+    quantization_base_class: Optional[Type] = None,
     **kwargs: Any,
 ) -> ModelStatistics:
     """
@@ -192,7 +194,7 @@ def summary(
         input_data, input_size, batch_dim, device, dtypes
     )
     summary_list = forward_pass(
-        model, x, batch_dim, cache_forward_pass, device, **kwargs
+        model, x, batch_dim, cache_forward_pass, device, quantization_base_class=quantization_base_class, **kwargs
     )
     formatting = FormattingOptions(depth, verbose, col_names, col_width, row_settings)
     results = ModelStatistics(
@@ -234,6 +236,7 @@ def forward_pass(
     batch_dim: Optional[int],
     cache_forward_pass: bool,
     device: Union[torch.device, str],
+    quantization_base_class: Optional[Type] = None,
     **kwargs: Any,
 ) -> List[LayerInfo]:
     """Perform a forward pass on the model using forward hooks."""
@@ -245,7 +248,7 @@ def forward_pass(
     summary_list: List[LayerInfo] = []
     hooks: Optional[List[RemovableHandle]] = None if x is None else []
     named_module = (model_name, model)
-    apply_hooks(named_module, model, batch_dim, summary_list, {}, hooks)
+    apply_hooks(named_module, model, batch_dim, summary_list, {}, hooks, quantization_base_class=quantization_base_class)
 
     if x is None:
         if not summary_list or summary_list[0].var_name != model_name:
@@ -438,6 +441,7 @@ def apply_hooks(
     hooks: Optional[List[RemovableHandle]],
     curr_depth: int = 0,
     parent_info: Optional[LayerInfo] = None,
+    quantization_base_class: Optional[Type] = None,
 ) -> None:
     """
     If input_data is provided, recursively adds hooks to all layers of the model.
@@ -457,7 +461,7 @@ def apply_hooks(
         info = LayerInfo(var_name, module, curr_depth, idx[curr_depth], parent_info)
         info.calculate_num_params()
         info.check_recursive(summary_list)
-        info.determine_if_quantized()
+        info.determine_if_quantized(quantization_base_class)
         summary_list.append(info)
 
     def hook(module: nn.Module, inputs: Any, outputs: Any) -> None:
@@ -479,7 +483,7 @@ def apply_hooks(
     # module.named_modules(remove_duplicate=False) doesn't work (infinite recursion).
     for child in module._modules.items():  # pylint: disable=protected-access
         apply_hooks(
-            child, orig_model, batch_dim, summary_list, idx, hooks, curr_depth + 1, info
+            child, orig_model, batch_dim, summary_list, idx, hooks, curr_depth + 1, info, quantization_base_class=quantization_base_class
         )
 
 
