@@ -25,28 +25,29 @@ class ModelStatistics:
         self.total_quantized_output, self.total_quantized_mult_adds = 0, 0
 
         for layer_info in summary_list:
-            if layer_info.quantized:
-                self.total_quantized_mult_adds += layer_info.macs
-            else:
-                self.total_fp_mult_adds += layer_info.macs
-            if layer_info.is_recursive:
-                continue
-            if layer_info.quantized:
-                self.total_quantized_params += layer_info.num_params
-            else:
-                self.total_fp_params += layer_info.num_params
-            if layer_info.trainable:
+            if layer_info.is_leaf_layer or layer_info.quantized:
                 if layer_info.quantized:
-                    self.trainable_quantized_params += layer_info.num_params
+                    self.total_quantized_mult_adds += layer_info.macs
                 else:
-                    self.trainable_fp_params += layer_info.num_params
+                    self.total_fp_mult_adds += layer_info.macs
+                if layer_info.is_recursive:
+                    continue
+                if layer_info.quantized:
+                    self.total_quantized_params += layer_info.num_params
+                else:
+                    self.total_fp_params += layer_info.num_params
+                if layer_info.trainable:
+                    if layer_info.quantized:
+                        self.trainable_quantized_params += layer_info.num_params
+                    else:
+                        self.trainable_fp_params += layer_info.num_params
 
-            if layer_info.num_params > 0:
-                # x2 for gradients
-                if layer_info.quantized:
-                    self.total_quantized_output += 2 * prod(layer_info.output_size)
-                else:
-                    self.total_fp_output += 2 * prod(layer_info.output_size)
+                if layer_info.num_params > 0:
+                    # x2 for gradients
+                    if layer_info.quantized:
+                        self.total_quantized_output += 2 * prod(layer_info.output_size)
+                    else:
+                        self.total_fp_output += 2 * prod(layer_info.output_size)
                 
 
         self.formatting.set_layer_name_width(summary_list)
@@ -66,33 +67,22 @@ class ModelStatistics:
             f"Non-trainable full precision params: {self.total_quantized_params - self.trainable_quantized_params:,}\n{divider}\n"
         )
         if self.input_size:
-            summary_str += (
-                "Total full precision mult-adds: {}\n"
-                "Total quantized mult-adds: {}\n{}\n"
-                "Input size (MB): {:0.2f}\n"
-                "Forward/backward pass size full precision (MB): {:0.2f}\n"
-                "Estimated Forward/backward pass size quantized (assuming 1 bit resolution) (MB): {:0.2f}\n"
-                "Forward/backward pass size total (MB): {:0.2f}\n"
-                "Params size full precision (MB): {:0.2f}\n"
-                "Params size quantized (assuming 1 bit resolution) (MB): {:0.2f}\n"
-                "Params size total (MB): {:0.2f}\n"
-                "Estimated Total Size (MB): {:0.2f}\n".format(
-                    self.to_readable(self.total_fp_mult_adds),
-                    self.to_readable(self.total_quantized_mult_adds),
-                    divider,
-                    self.to_megabytes(self.total_input),
-                    self.float_to_megabytes(self.total_fp_output),
-                    self.bit_to_megabytes(self.total_quantized_output),
-                    self.float_to_megabytes(self.total_fp_output) + self.bit_to_megabytes(self.total_quantized_output),
-                    self.float_to_megabytes(self.total_fp_params),
-                    self.bit_to_megabytes(self.total_quantized_params),
-                    self.float_to_megabytes(self.total_fp_params) + self.bit_to_megabytes(self.total_quantized_params),
-                    (
+            total_size = (
                         self.to_megabytes(self.total_input)
                         + self.float_to_megabytes(self.total_fp_output + self.total_fp_params)
                         + self.bit_to_megabytes(self.total_quantized_output + self.total_quantized_params)
-                    ),
-                )
+                    )
+            summary_str += (
+                f"Total full precision mult-adds: {self.to_readable(self.total_fp_mult_adds)}\n"
+                f"Total quantized mult-adds: {self.to_readable(self.total_quantized_mult_adds)}\n{divider}\n"
+                f"Input size (MB): {self.to_megabytes(self.total_input):0.2f}\n"
+                f"Forward/backward pass size full precision (MB): {self.float_to_megabytes(self.total_fp_output):0.2f}\n"
+                f"Estimated Forward/backward pass size quantized (assuming 1 bit resolution) (MB): {self.bit_to_megabytes(self.total_quantized_output):0.2f}\n"
+                f"Forward/backward pass size total (MB): {self.float_to_megabytes(self.total_fp_output) + self.bit_to_megabytes(self.total_quantized_output):0.2f}\n"
+                f"Params size full precision (MB): {self.float_to_megabytes(self.total_fp_params):0.2f}\n"
+                f"Params size quantized (assuming 1 bit resolution) (MB): {self.bit_to_megabytes(self.total_quantized_params):0.2f}\n"
+                f"Params size total (MB): {self.float_to_megabytes(self.total_fp_params) + self.bit_to_megabytes(self.total_quantized_params):0.2f}\n"
+                f"Estimated Total Size (MB): {total_size:0.2f}\n"
             )
         summary_str += divider
         return summary_str

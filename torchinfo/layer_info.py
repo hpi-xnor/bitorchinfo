@@ -120,7 +120,8 @@ class LayerInfo:
         which determines this module as a possible quantized layer
         """
         if quantization_base_class:
-            self.quantized = any([issubclass(type(module), quantization_base_class) for module in self.module.modules()])
+            attribute_types = [type(getattr(self.module, attribute)) for attribute in dir(self.module)]
+            self.quantized = any([issubclass(attribute_type, quantization_base_class) for attribute_type in attribute_types])
         else:
             self.quantized = False
 
@@ -189,19 +190,20 @@ class LayerInfo:
         """Convert MACs to string."""
         if self.macs <= 0:
             return "--"
-        if self.is_leaf_layer:
+        if self.is_leaf_layer or self.quantized:
             return f"{self.macs:,}"
-        else:
+        if reached_max_depth:
             sum_child_macs = sum(
-                child.macs for child in children_layers if child.is_leaf_layer
-            ) + self.macs
+                child.macs for child in children_layers if child.is_leaf_layer or child.quantized
+            )
             return f"{sum_child_macs:,}"
+        return "--"
 
     def num_params_to_str(self, reached_max_depth: bool) -> str:
         """Convert num_params to string."""
         if self.is_recursive:
             return "(recursive)"
-        if self.num_params > 0:
+        if self.num_params > 0 and (reached_max_depth or self.is_leaf_layer or self.quantized ):
             param_count_str = f"{self.num_params:,}"
             return param_count_str if self.trainable else f"({param_count_str})"
         return "--"
