@@ -1,5 +1,5 @@
 """ layer_info.py """
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Union
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Type, Union
 
 import torch
 from torch import nn
@@ -46,6 +46,7 @@ class LayerInfo:
         self.kernel_size: List[int] = []
         self.num_params = 0
         self.macs = 0
+        self.quantized = False
 
     def __repr__(self) -> str:
         return f"{self.class_name}: {self.depth}"
@@ -113,6 +114,16 @@ class LayerInfo:
             if self.depth_index is not None:
                 layer_name += f"-{self.depth_index}"
         return layer_name
+    
+    def determine_if_quantized(self, quantization_base_class: Optional[Type] = None) -> None:
+        """check if module has a quantization function as a named parameter
+        which determines this module as a possible quantized layer
+        """
+        if quantization_base_class:
+            attribute_types = [type(getattr(self.module, attribute)) for attribute in dir(self.module)]
+            self.quantized = any([issubclass(attribute_type, quantization_base_class) for attribute_type in attribute_types])
+        else:
+            self.quantized = False
 
     def calculate_num_params(self) -> None:
         """
@@ -179,11 +190,11 @@ class LayerInfo:
         """Convert MACs to string."""
         if self.macs <= 0:
             return "--"
-        if self.is_leaf_layer:
+        if self.is_leaf_layer or self.quantized:
             return f"{self.macs:,}"
         if reached_max_depth:
             sum_child_macs = sum(
-                child.macs for child in children_layers if child.is_leaf_layer
+                child.macs for child in children_layers if child.is_leaf_layer or child.quantized
             )
             return f"{sum_child_macs:,}"
         return "--"
@@ -192,7 +203,7 @@ class LayerInfo:
         """Convert num_params to string."""
         if self.is_recursive:
             return "(recursive)"
-        if self.num_params > 0 and (reached_max_depth or self.is_leaf_layer):
+        if self.num_params > 0 and (reached_max_depth or self.is_leaf_layer or self.quantized ):
             param_count_str = f"{self.num_params:,}"
             return param_count_str if self.trainable else f"({param_count_str})"
         return "--"
