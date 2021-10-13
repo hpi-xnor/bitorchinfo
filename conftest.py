@@ -7,9 +7,9 @@ from typing import Iterator
 import pytest
 from _pytest.config.argparsing import Parser
 
-from torchinfo import ModelStatistics
-from torchinfo.formatting import HEADER_TITLES
-from torchinfo.torchinfo import clear_cached_forward_pass
+from bitorchinfo import ModelStatistics
+from bitorchinfo.formatting import HEADER_TITLES
+from bitorchinfo.bitorchinfo import clear_cached_forward_pass
 
 
 def pytest_addoption(parser: Parser) -> None:
