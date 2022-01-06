@@ -7,7 +7,7 @@ Please check out and use the original project, unless you specifically want to u
 # Usage
 
 ```
-pip install torchinfo
+pip install bitorchinfo
 ```
 
 # Contributing
