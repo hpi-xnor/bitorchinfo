@@ -2,7 +2,7 @@
 
 This project is an extended version of [torchinfo](https://github.com/tyleryep/torchinfo).
 However we added support for binary layers, as used in [bitorch](https://github.com/hpi-xnor/bitorch).
-Please check out and use the original project, unless you sepecifically want to use this package in conjunction with [bitorch](https://github.com/hpi-xnor/bitorch).
+Please check out and use the original project, unless you specifically want to use this package in conjunction with [bitorch](https://github.com/hpi-xnor/bitorch).
 
 # Usage
 

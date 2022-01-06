@@ -83,6 +83,9 @@ target/
 profile_default/
 ipython_config.py
 
+# dev files
+.idea
+
 # pyenv
 .python-version
 
